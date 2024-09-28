@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Challenger by PR</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        #game-screen, #settings-screen, #summary-screen, #add-question-screen {
+            display: none;
+        }
+
+        #start-screen {
+            display: block;
+            margin-top: 100px;
+        }
+
+        h1 {
+            font-size: 48px;
+        }
+
+        h2 {
+            font-size: 24px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 20px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .reaction {
+            font-size: 36px;
+            animation: zoomIn 1s ease-out;
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .countdown {
+            font-size: 20px;
+            color: red;
+        }
+
+        #question-area {
+            margin: 20px;
+            font-size: 24px;
+        }
+
+        #answer-status {
+            margin-top: 30px;
+        }
+
+        #share-btn {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Start Screen -->
+    <div id="start-screen">
+        <h1>Translation Challenger by PR</h1>
+        <h2>App Developer: Prodip Roy</h2>
+        <button onclick="startGame()">খেলা শুরু করুন</button>
+        <button onclick="showSettings()">সেটিংস</button>
+        <button id="share-btn" onclick="shareApp()">শেয়ার করুন</button>
+        <button onclick="exitGame()">Exit</button>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="game-screen">
+        <h2 id="question-title">প্রশ্ন</h2>
+        <div id="question-area"></div>
+        <div id="countdown" class="countdown">Time: <span id="time-left">30</span> seconds</div>
+        <input type="text" id="answer-input" placeholder="আপনার উত্তর দিন">
+        <button onclick="submitAnswer()">উত্তর দিন</button>
+        <div id="answer-status"></div>
+        <div id="reaction"></div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settings-screen">
+        <h2>Settings</h2>
+        <button onclick="showAddQuestion()">নতুন প্রশ্ন যুক্ত করুন</button><br><br>
+        <label>
+            MCQ Mode: <input type="checkbox" id="mcq-toggle">
+        </label><br><br>
+        <label>
+            Dark Mode: <input type="checkbox" id="dark-mode-toggle" onchange="toggleDarkMode()">
+        </label><br><br>
+        <label>
+            Sound: <input type="checkbox" id="sound-toggle">
+        </label><br><br>
+        <button onclick="backToStart()">Back</button>
+    </div>
+
+    <!-- Add Question Screen -->
+    <div id="add-question-screen">
+        <h2>নতুন প্রশ্ন যুক্ত করুন</h2>
+        <input type="text" id="new-question" placeholder="প্রশ্ন লিখুন"><br><br>
+        <input type="text" id="new-answer" placeholder="উত্তর লিখুন"><br><br>
+        <button onclick="addNewQuestion()">প্রশ্ন যুক্ত করুন</button><br><br>
+        <button onclick="backToSettings()">Back</button>
+    </div>
+
+    <!-- Summary Screen -->
+    <div id="summary-screen">
+        <h2>Game Summary</h2>
+        <p>সঠিক উত্তর: <span id="correct-count"></span></p>
+        <p>ভুল উত্তর: <span id="wrong-count"></span></p>
+        <button onclick="showDetails()">Details</button>
+        <button onclick="restartGame()">পুনরায় খেলুন</button>
+    </div>
+
+    <script>
+        // Basic Game Variables
+        let questions = [
+            { question: "What is your name?", answer: "My name is Prodip" },
+            { question: "Where do you live?", answer: "I live in Bangladesh" },
+            { question: "What do you eat today?", answer: "I ate rice" }
+        ];
+        let currentQuestion = 0;
+        let score = 0;
+        let correctAnswers = 0;
+        let wrongAnswers = 0;
+        let timeLeft = 30;
+        let countdownTimer;
+        let nextQuestionTimer;
+        let addedQuestions = [];
+
+        // Start Game
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-screen').style.display = 'block';
+            loadQuestion();
+            startCountdown();
+        }
+
+        // Load Question
+        function loadQuestion() {
+            document.getElementById('question-area').innerText = questions[currentQuestion].question;
+        }
+
+        // Countdown Timer
+        function startCountdown() {
+            timeLeft = 30;
+            document.getElementById('time-left').innerText = timeLeft;
+            countdownTimer = setInterval(function () {
+                timeLeft--;
+                document.getElementById('time-left').innerText = timeLeft;
+                if (timeLeft <= 10 && document.getElementById('sound-toggle').checked) {
+                    playWarningSound();
+                }
+                if (timeLeft <= 0) {
+                    clearInterval(countdownTimer);
+                    submitAnswer();
+                }
+            }, 1000);
+        }
+
+        // Submit Answer
+        function submitAnswer() {
+            clearInterval(countdownTimer);
+            let userAnswer = document.getElementById('answer-input').value;
+            let correctAnswer = questions[currentQuestion].answer;
+            if (userAnswer.toLowerCase() === correctAnswer.toLowerCase()) {
+                score += 2;
+                correctAnswers++;
+                document.getElementById('reaction').innerText = "🎉 Love!";
+                document.getElementById('answer-status').innerText = "Correct!";
+                playCorrectSound();
+            } else {
+                score -= 1;
+                wrongAnswers++;
+                document.getElementById('reaction').innerText = "😢 Sad!";
+                document.getElementById('answer-status').innerText = `Wrong! Correct answer: ${correctAnswer}`;
+                playWrongSound();
+            }
+            nextQuestionTimer = setTimeout(loadNextQuestion, 10000);
+        }
+
+        // Add New Question
+        function addNewQuestion() {
+            let newQuestionText = document.getElementById('new-question').value;
+            let newAnswerText = document.getElementById('new-answer').value;
+            if (newQuestionText && newAnswerText) {
+                questions.push({ question: newQuestionText, answer: newAnswerText });
+                addedQuestions.push({ question: newQuestionText, answer: newAnswerText });
+                alert("প্রশ্ন যুক্ত হয়েছে!");
+            } else {
+                alert("অনুগ্রহ করে প্রশ্ন এবং উত্তর পূরণ করুন।");
+            }
+        }
+// Delete a Question
+        function deleteQuestion(index) {
+            if (confirm("আপনি কি সত্যিই এই প্রশ্নটি মুছে ফেলতে চান?")) {
+                questions.splice(index, 1);
+                alert("প্রশ্ন মুছে ফেলা হয়েছে!");
+            }
+        }
+
+        // Add Multiple Choice Questions (MCQ) Options
+        function toggleMCQMode() {
+            let mcqMode = document.getElementById('mcq-toggle').checked;
+            if (mcqMode) {
+                questions.forEach((q, index) => {
+                    q.options = [
+                        q.answer, 
+                        "Option 1",
+                        "Option 2",
+                        "Option 3"
+                    ];
+                });
+                alert("MCQ মোড চালু করা হয়েছে!");
+            } else {
+                questions.forEach((q) => {
+                    delete q.options;  // Remove MCQ options if toggled off
+                });
+                alert("MCQ মোড বন্ধ করা হয়েছে!");
+            }
+        }
+
+        // Submit MCQ Answer
+        function submitMCQAnswer(selectedOption) {
+            clearInterval(countdownTimer);
+            let correctAnswer = questions[currentQuestion].answer;
+            if (selectedOption === correctAnswer) {
+                score += 2;
+                correctAnswers++;
+                document.getElementById('reaction').innerText = "🎉 Love!";
+                document.getElementById('answer-status').innerText = "Correct!";
+                playCorrectSound();
+            } else {
+                score -= 1;
+                wrongAnswers++;
+                document.getElementById('reaction').innerText = "😢 Sad!";
+                document.getElementById('answer-status').innerText = `Wrong! Correct answer: ${correctAnswer}`;
+                playWrongSound();
+            }
+            nextQuestionTimer = setTimeout(loadNextQuestion, 10000);
+        }
+        // Dark Mode
+        function toggleDarkMode() {
+            if (document.getElementById('dark-mode-toggle').checked) {
+                document.body.style.backgroundColor = '#333';
+                document.body.style.color = '#fff';
+            } else {
+                document.body.style.backgroundColor = '#fff';
+                document.body.style.color = '#333';
+            }
+        }
+
+        // Share App
+        function shareApp() {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Translation Challenger by PR',
+                    text: 'এই গেমটি খেলুন এবং আপনার বন্ধুবান্ধবদের সাথে শেয়ার করুন!',
+                    url: window.location.href
+                });
+            } else {
+                alert('Sharing not supported on this browser.');
+            }
+        }
+
+        // Exit Game
+        function exitGame() {
+            alert("Exiting the game...");
+        }
+
+        // Back to Settings
+        function backToSettings() {
+            document.getElementById('add-question-screen').style.display = 'none';
+            document.getElementById('settings-screen').style.display = 'block';
+        }
+
+        // Show Add Question Screen
+        function showAddQuestion() {
+            document.getElementById('settings-screen').style.display = 'none';
+            document.getElementById('add-question-screen').style.display = 'block';
+        }
+
+        // Back to Start Screen
+        function backToStart() {
+            document.getElementById('settings-screen').style.display = 'none';
+            document.getElementById('start-screen').style.display = 'block';
+        }
+
+       // Sounds for correct answers
+        function playCorrectSound() {
+            let audio = new Audio('correct.mp3');
+            audio.play();
+        }
+
+        // Sounds for wrong answers
+        function playWrongSound() {
+            let audio = new Audio('wrong.mp3');
+            audio.play();
+        }
+
+        // Warning Sound (10 seconds remaining)
+        function playWarningSound() {
+            let audio = new Audio('warning.mp3');
+            audio.play();
+        }
+
+        // Load Next Question
+        function loadNextQuestion() {
+            clearTimeout(nextQuestionTimer);
+            currentQuestion++;
+            if (currentQuestion >= questions.length) {
+                endGame();
+            } else {
+                document.getElementById('answer-input').value = "";
+                document.getElementById('answer-status').innerText = "";
+                document.getElementById('reaction').innerText = "";
+                loadQuestion();
+                startCountdown();
+            }
+        }
+
+        // End Game
+        function endGame() {
+            document.getElementById('game-screen').style.display = 'none';
+            document.getElementById('summary-screen').style.display = 'block';
+            document.getElementById('correct-count').innerText = correctAnswers;
+            document.getElementById('wrong-count').innerText = wrongAnswers;
+
+            let performance;
+            if (correctAnswers > wrongAnswers) {
+                performance = "Best!";
+            } else if (correctAnswers === wrongAnswers) {
+                performance = "Better!";
+            } else {
+                performance = "Good!";
+            }
+            alert(performance);
+        }
+
+        // Show Details of the Game
+        function showDetails() {
+            let details = "Details of your game:\n";
+            questions.forEach((q, index) => {
+                details += `Question ${index + 1}: ${q.question}\nAnswer: ${q.answer}\n\n`;
+            });
+            alert(details);
+        }
+
+        // Restart Game
+        function restartGame() {
+            currentQuestion = 0;
+            score = 0;
+            correctAnswers = 0;
+            wrongAnswers = 0;
+            document.getElementById('summary-screen').style.display = 'none';
+            startGame();
+        }
+    </script>
+<!-- Question Manager in Settings -->
+    <div id="question-manager">
+        <h3>Current Questions:</h3>
+        <ul id="question-list">
+            <!-- Dynamically populated -->
+        </ul>
+    </div>
+
+    <script>
+        // Load Existing Questions in Settings
+        function loadQuestionManager() {
+            let questionList = document.getElementById('question-list');
+            questionList.innerHTML = '';
+            questions.forEach((q, index) => {
+                let listItem = document.createElement('li');
+                listItem.innerHTML = `
+                    ${q.question}
+                    <button onclick="deleteQuestion(${index})">Delete</button>
+                `;
+                questionList.appendChild(listItem);
+            });
+        }
+
+        // Show Settings Screen
+        function showSettings() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('settings-screen').style.display = 'block';
+            loadQuestionManager();  // Load questions in settings
+        }
+    </script>
+</body>
+</html>
